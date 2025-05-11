@@ -109,17 +109,23 @@ const SimulationPage: React.FC = () => {
   if (type === 'http') {
     setHttpConfig(prev => {
       const updated = { ...prev, isRunning: !prev.isRunning };
-      if (!prev.isRunning) simulateHttpRequest(); // Lähetä heti kun käynnistetään
+      if (!prev.isRunning) {
+        // Odota tilan päivitystä ennen suoraa kutsua
+        setTimeout(() => simulateHttpRequest(), 0);
+      }
       return updated;
     });
   } else {
     setMqttConfig(prev => {
       const updated = { ...prev, isRunning: !prev.isRunning };
-      if (!prev.isRunning) simulateMqttPublish(); // Halutessa voi tehdä saman MQTT:lle
+      if (!prev.isRunning) {
+        setTimeout(() => simulateMqttPublish(), 0);
+      }
       return updated;
     });
   }
 };
+
 
   return (
     <div className="bg-slate-50 min-h-screen py-16">
