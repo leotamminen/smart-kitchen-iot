@@ -58,12 +58,16 @@ const SimulationPage: React.FC = () => {
     }));
 
     try {
+      const parsedPayload = JSON.parse(httpPayload); // Varmistetaan että body on oikeaa JSON:ia
+
       fetch(httpEndpoint, {
         method: httpMethod,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: httpMethod === 'GET' || httpMethod === 'DELETE' ? undefined : httpPayload,
+        body: httpMethod === 'GET' || httpMethod === 'DELETE'
+          ? undefined
+          : JSON.stringify(parsedPayload),
       })
         .then(res => {
           if (!res.ok) {
@@ -74,10 +78,11 @@ const SimulationPage: React.FC = () => {
           console.error('HTTP request error:', err);
         });
     } catch (err) {
-      console.error('Fetch error:', err);
+      console.error('Invalid JSON in payload:', err);
     }
   }
 }, [httpConfig.isRunning, httpPayload, httpEndpoint, httpMethod, addMessage]);
+
 
 
   const simulateMqttPublish = useCallback(() => {
