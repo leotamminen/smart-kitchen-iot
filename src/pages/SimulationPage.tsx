@@ -24,7 +24,7 @@ const INTERVALS = {
 const SimulationPage: React.FC = () => {
   // HTTP Device State
   const [httpMethod, setHttpMethod] = useState('POST');
-  const [httpEndpoint, setHttpEndpoint] = useState('http://localhost:8080/api/v1/DEVICE_TOKEN/telemetry');
+  const [httpEndpoint, setHttpEndpoint] = useState('http://localhost:8080/api/data');
   const [httpPayload, setHttpPayload] = useState('{\n  "shopping_note": "osta 2 tomaattia, osta maito"\n}');
   const [httpConfig, setHttpConfig] = useState<SimulationConfig>({
     interval: 0,
