@@ -25,7 +25,7 @@ const SimulationPage: React.FC = () => {
   // HTTP Device State
   const [httpMethod, setHttpMethod] = useState('POST');
   const [httpEndpoint, setHttpEndpoint] = useState('http://localhost:8080/api/data');
-  const [httpPayload, setHttpPayload] = useState('{\n  "maito"\n}');
+  const [httpPayload, setHttpPayload] = useState('{\n  "item": "maito"\n}');
   const [httpConfig, setHttpConfig] = useState<SimulationConfig>({
     interval: 0,
     isRunning: false,
@@ -106,6 +106,7 @@ const SimulationPage: React.FC = () => {
   useInterval(simulateMqttPublish, mqttConfig.interval || null);
 
   const toggleSimulation = (type: 'http' | 'mqtt') => {
+  console.log(`[DEBUG] Toggle pressed for ${type}`);
   if (type === 'http') {
     setHttpConfig(prev => {
       const updated = { ...prev, isRunning: !prev.isRunning };
