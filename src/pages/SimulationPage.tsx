@@ -51,38 +51,47 @@ const SimulationPage: React.FC = () => {
   }, []);
 
   const simulateHttpRequest = useCallback(() => {
-  if (httpConfig.isRunning) {
-    try {
-      const parsedPayload = JSON.parse(httpPayload); // varmista että payload on validia JSONia
+  if (!httpConfig.isRunning) return;
 
-      fetch(httpEndpoint, {
-        method: httpMethod,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: httpMethod === 'GET' || httpMethod === 'DELETE'
-          ? undefined
-          : JSON.stringify(parsedPayload),
-      })
-        .then(res => {
-          if (!res.ok) {
-            console.error(`HTTP ${httpMethod} request failed`, res.statusText);
-          } else {
-            setHttpConfig(prev => ({
-              ...prev,
-              messages: addMessage(prev.messages, httpPayload),
-            }));
-          }
-        })
-        .catch(err => {
-          console.error('HTTP request error:', err);
-        });
-    } catch (err) {
-      console.error('Invalid JSON in payload:', err);
-    }
+  let parsedPayload;
+  try {
+    parsedPayload = JSON.parse(httpPayload);
+  } catch (err) {
+    console.error("❌ Invalid JSON in payload:", err);
+    return;
   }
-}, [httpConfig.isRunning, httpPayload, httpEndpoint, httpMethod, addMessage]);
 
+  console.log("📤 Sending HTTP request", {
+    method: httpMethod,
+    endpoint: httpEndpoint,
+    payload: parsedPayload,
+  });
+
+  fetch(httpEndpoint, {
+    method: httpMethod,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body:
+      httpMethod === "GET" || httpMethod === "DELETE"
+        ? undefined
+        : JSON.stringify(parsedPayload),
+  })
+    .then((res) => {
+      if (!res.ok) {
+        console.error(`❌ HTTP ${httpMethod} request failed`, res.status, res.statusText);
+      } else {
+        console.log("✅ HTTP request successful");
+        setHttpConfig((prev) => ({
+          ...prev,
+          messages: addMessage(prev.messages, httpPayload),
+        }));
+      }
+    })
+    .catch((err) => {
+      console.error("❌ HTTP request error:", err);
+    });
+}, [httpConfig.isRunning, httpPayload, httpEndpoint, httpMethod, addMessage]);
 
   const simulateMqttPublish = useCallback(() => {
     if (mqttConfig.isRunning) {
