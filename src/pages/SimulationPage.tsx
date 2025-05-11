@@ -51,13 +51,34 @@ const SimulationPage: React.FC = () => {
   }, []);
 
   const simulateHttpRequest = useCallback(() => {
-    if (httpConfig.isRunning) {
-      setHttpConfig(prev => ({
-        ...prev,
-        messages: addMessage(prev.messages, httpPayload),
-      }));
+  if (httpConfig.isRunning) {
+    setHttpConfig(prev => ({
+      ...prev,
+      messages: addMessage(prev.messages, httpPayload),
+    }));
+
+    try {
+      fetch(httpEndpoint, {
+        method: httpMethod,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: httpMethod === 'GET' || httpMethod === 'DELETE' ? undefined : httpPayload,
+      })
+        .then(res => {
+          if (!res.ok) {
+            console.error(`HTTP ${httpMethod} request failed`, res.statusText);
+          }
+        })
+        .catch(err => {
+          console.error('HTTP request error:', err);
+        });
+    } catch (err) {
+      console.error('Fetch error:', err);
     }
-  }, [httpConfig.isRunning, httpPayload, addMessage]);
+  }
+}, [httpConfig.isRunning, httpPayload, httpEndpoint, httpMethod, addMessage]);
+
 
   const simulateMqttPublish = useCallback(() => {
     if (mqttConfig.isRunning) {
