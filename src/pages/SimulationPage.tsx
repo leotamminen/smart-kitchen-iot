@@ -51,13 +51,12 @@ const SimulationPage: React.FC = () => {
   }, []);
 
   const simulateHttpRequest = useCallback(() => {
-  if (!httpConfig.isRunning) return;
-
   let parsedPayload;
   try {
     parsedPayload = JSON.parse(httpPayload);
   } catch (err) {
     console.error("❌ Invalid JSON in payload:", err);
+    alert("Payload is not valid JSON");
     return;
   }
 
@@ -91,7 +90,8 @@ const SimulationPage: React.FC = () => {
     .catch((err) => {
       console.error("❌ HTTP request error:", err);
     });
-}, [httpConfig.isRunning, httpPayload, httpEndpoint, httpMethod, addMessage]);
+}, [httpPayload, httpEndpoint, httpMethod, addMessage]);
+
 
   const simulateMqttPublish = useCallback(() => {
     if (mqttConfig.isRunning) {
