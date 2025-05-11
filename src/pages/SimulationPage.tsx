@@ -93,12 +93,20 @@ const SimulationPage: React.FC = () => {
   useInterval(simulateMqttPublish, mqttConfig.interval || null);
 
   const toggleSimulation = (type: 'http' | 'mqtt') => {
-    if (type === 'http') {
-      setHttpConfig(prev => ({ ...prev, isRunning: !prev.isRunning }));
-    } else {
-      setMqttConfig(prev => ({ ...prev, isRunning: !prev.isRunning }));
-    }
-  };
+  if (type === 'http') {
+    setHttpConfig(prev => {
+      const updated = { ...prev, isRunning: !prev.isRunning };
+      if (!prev.isRunning) simulateHttpRequest(); // Lähetä heti kun käynnistetään
+      return updated;
+    });
+  } else {
+    setMqttConfig(prev => {
+      const updated = { ...prev, isRunning: !prev.isRunning };
+      if (!prev.isRunning) simulateMqttPublish(); // Halutessa voi tehdä saman MQTT:lle
+      return updated;
+    });
+  }
+};
 
   return (
     <div className="bg-slate-50 min-h-screen py-16">
