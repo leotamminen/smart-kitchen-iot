@@ -52,13 +52,8 @@ const SimulationPage: React.FC = () => {
 
   const simulateHttpRequest = useCallback(() => {
   if (httpConfig.isRunning) {
-    setHttpConfig(prev => ({
-      ...prev,
-      messages: addMessage(prev.messages, httpPayload),
-    }));
-
     try {
-      const parsedPayload = JSON.parse(httpPayload); // Varmistetaan että body on oikeaa JSON:ia
+      const parsedPayload = JSON.parse(httpPayload); // varmista että payload on validia JSONia
 
       fetch(httpEndpoint, {
         method: httpMethod,
@@ -72,6 +67,11 @@ const SimulationPage: React.FC = () => {
         .then(res => {
           if (!res.ok) {
             console.error(`HTTP ${httpMethod} request failed`, res.statusText);
+          } else {
+            setHttpConfig(prev => ({
+              ...prev,
+              messages: addMessage(prev.messages, httpPayload),
+            }));
           }
         })
         .catch(err => {
@@ -82,7 +82,6 @@ const SimulationPage: React.FC = () => {
     }
   }
 }, [httpConfig.isRunning, httpPayload, httpEndpoint, httpMethod, addMessage]);
-
 
 
   const simulateMqttPublish = useCallback(() => {
