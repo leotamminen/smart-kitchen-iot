@@ -3,7 +3,7 @@ import mqtt from 'mqtt';
 import { useState, useEffect, useCallback } from 'react';
 import { useInterval } from 'react-use';
 import { Play, Pause, Clock, RefreshCw, Terminal, Send, Radio, AlertCircle } from 'lucide-react';
-const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
+
 
 interface Message {
   timestamp: string;
@@ -37,6 +37,7 @@ const SimulationPage: React.FC = () => {
   });
 
   // MQTT Device State
+  const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
   const [mqttBroker, setMqttBroker] = useState('mqtt://broker.hivemq.com');
   const [mqttTopic, setMqttTopic] = useState('smart/fridge');
   const [mqttPayload, setMqttPayload] = useState('{\n  "items": ["maito", "tomaatti", "juusto"]\n}');
@@ -100,7 +101,7 @@ useEffect(() => {
   if (mqttConfig.isRunning && !mqttClient) {
     const client = mqtt.connect(mqttBroker, {
       clientId: 'web_client_' + Math.random().toString(16).substr(2, 8),
-      username: '<YOUR_DEVICE_TOKEN>', // Use your ThingsBoard device token
+      username: 'ra4l11pN8UEXmRRbJ7WB', // Use your ThingsBoard device token
       // password: '', // not needed for ThingsBoard
     });
 
