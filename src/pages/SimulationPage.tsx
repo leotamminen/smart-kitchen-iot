@@ -38,7 +38,7 @@ const SimulationPage: React.FC = () => {
 
   // MQTT Device State
   const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
-  const [mqttBroker, setMqttBroker] = useState('mqtt://broker.hivemq.com');
+  const [mqttBroker, setMqttBroker] = useState('ws://localhost:8083/mqtt');
   const [mqttTopic, setMqttTopic] = useState('smart/fridge');
   const [mqttPayload, setMqttPayload] = useState('{\n  "items": ["maito", "tomaatti", "juusto"]\n}');
   const [mqttConfig, setMqttConfig] = useState<SimulationConfig>({
@@ -100,36 +100,51 @@ const SimulationPage: React.FC = () => {
 useEffect(() => {
   if (mqttConfig.isRunning && !mqttClient) {
     const client = mqtt.connect(mqttBroker, {
-      clientId: 'web_client_' + Math.random().toString(16).substr(2, 8),
-      username: 'ra4l11pN8UEXmRRbJ7WB', // Use your ThingsBoard device token
-      // password: '', // not needed for ThingsBoard
+      username: 'ra4l11pN8UEXmRRbJ7WB',
+      clientId: 'web_' + Math.random().toString(16).substr(2, 8),
+      protocolVersion: 4,
+      clean: true,
+      reconnectPeriod: 5000,
+      connectTimeout: 3000,
     });
 
     client.on('connect', () => {
-      console.log('✅ MQTT connected to', mqttBroker);
+      console.log('✅ Connected to MQTT broker');
+      client.publish('v1/devices/me/telemetry', JSON.stringify({ items: ["test_connection"] }));
     });
 
     client.on('error', (err) => {
-      console.error('❌ MQTT error:', err);
+      console.error('❌ Connection error:', err.message);
     });
 
     setMqttClient(client);
   }
 
-  // Disconnect on stop
+  
+  // Disconnect if stopped
   if (!mqttConfig.isRunning && mqttClient) {
-    mqttClient.end(true, () => {
-      console.log('🔌 MQTT disconnected');
+    console.log('🛑 Stopping MQTT client...');
+    mqttClient.end(true, {}, () => {
+      console.log('✅ MQTT client disconnected');
       setMqttClient(null);
     });
   }
-}, [mqttConfig.isRunning, mqttBroker, mqttClient]);
+
+  // Optional cleanup (e.g., on unmount)
+  return () => {
+    if (mqttClient) {
+      mqttClient.end(true);
+      setMqttClient(null);
+    }
+  };
+}, [mqttConfig.isRunning, mqttClient, mqttBroker]);
 
  const simulateMqttPublish = useCallback(() => {
   if (mqttClient && mqttClient.connected) {
     try {
       const parsed = JSON.parse(mqttPayload);
-      mqttClient.publish(mqttTopic, JSON.stringify(parsed));
+      // Use the correct ThingsBoard telemetry topic
+      mqttClient.publish('v1/devices/me/telemetry', JSON.stringify(parsed));
       console.log("📡 MQTT Published:", parsed);
 
       setMqttConfig(prev => ({
@@ -140,7 +155,7 @@ useEffect(() => {
       console.error("❌ Invalid MQTT JSON payload:", err);
     }
   }
-}, [mqttClient, mqttPayload, mqttTopic, addMessage]);
+}, [mqttClient, mqttPayload, addMessage]);
 
   useInterval(simulateHttpRequest, httpConfig.interval || null);
   useInterval(simulateMqttPublish, mqttConfig.interval || null);
