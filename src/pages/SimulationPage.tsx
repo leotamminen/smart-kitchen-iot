@@ -1,6 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import * as React from 'react';
+import mqtt from 'mqtt';
+import { useState, useEffect, useCallback } from 'react';
 import { useInterval } from 'react-use';
 import { Play, Pause, Clock, RefreshCw, Terminal, Send, Radio, AlertCircle } from 'lucide-react';
+const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
 
 interface Message {
   timestamp: string;
@@ -15,6 +18,7 @@ interface SimulationConfig {
 
 const INTERVALS = {
   OFF: 0,
+
   TEN_MINUTES: 600000,
   ONE_HOUR: 3600000,
   FIVE_HOURS: 18000000,
@@ -92,15 +96,50 @@ const SimulationPage: React.FC = () => {
     });
 }, [httpPayload, httpEndpoint, httpMethod, addMessage]);
 
+useEffect(() => {
+  if (mqttConfig.isRunning && !mqttClient) {
+    const client = mqtt.connect(mqttBroker, {
+      clientId: 'web_client_' + Math.random().toString(16).substr(2, 8),
+      username: '<YOUR_DEVICE_TOKEN>', // Use your ThingsBoard device token
+      // password: '', // not needed for ThingsBoard
+    });
 
-  const simulateMqttPublish = useCallback(() => {
-    if (mqttConfig.isRunning) {
+    client.on('connect', () => {
+      console.log('✅ MQTT connected to', mqttBroker);
+    });
+
+    client.on('error', (err) => {
+      console.error('❌ MQTT error:', err);
+    });
+
+    setMqttClient(client);
+  }
+
+  // Disconnect on stop
+  if (!mqttConfig.isRunning && mqttClient) {
+    mqttClient.end(true, () => {
+      console.log('🔌 MQTT disconnected');
+      setMqttClient(null);
+    });
+  }
+}, [mqttConfig.isRunning, mqttBroker, mqttClient]);
+
+ const simulateMqttPublish = useCallback(() => {
+  if (mqttClient && mqttClient.connected) {
+    try {
+      const parsed = JSON.parse(mqttPayload);
+      mqttClient.publish(mqttTopic, JSON.stringify(parsed));
+      console.log("📡 MQTT Published:", parsed);
+
       setMqttConfig(prev => ({
         ...prev,
         messages: addMessage(prev.messages, mqttPayload),
       }));
+    } catch (err) {
+      console.error("❌ Invalid MQTT JSON payload:", err);
     }
-  }, [mqttConfig.isRunning, mqttPayload, addMessage]);
+  }
+}, [mqttClient, mqttPayload, mqttTopic, addMessage]);
 
   useInterval(simulateHttpRequest, httpConfig.interval || null);
   useInterval(simulateMqttPublish, mqttConfig.interval || null);
