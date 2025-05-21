@@ -39,7 +39,9 @@ const SimulationPage: React.FC = () => {
   const [mqttBroker, setMqttBroker] = useState('mqtt://127.0.0.1:1883');
   const [mqttTopic, setMqttTopic] = useState('v1/devices/me/telemetry');
   const [mqttUsername, setMqttUsername] = useState('');
-  const [mqttPayload, setMqttPayload] = useState('{\n  "temperature": 22.3,\n  "humidity": 45\n}');
+  const [mqttPayload, setMqttPayload] = useState(
+    '{\n  "items": ["maito", "tomaatti", "juusto"]\n}'
+  );
   const [mqttConfig, setMqttConfig] = useState<SimulationConfig>({
     interval: 0,
     isRunning: false,
