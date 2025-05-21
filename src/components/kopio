@@ -38,9 +38,9 @@ const SimulationPage: React.FC = () => {
 
   // MQTT Device State
   const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
-  const [mqttBroker, setMqttBroker] = useState('ws://localhost:8083');
+  const [mqttBroker, setMqttBroker] = useState('mqtt://localhost:1884');
   const [mqttTopic, setMqttTopic] = useState('v1/devices/me/telemetry');
-  const [mqttPayload, setMqttPayload] = useState('{\n  "temperature": 7\n}');
+  const [mqttPayload, setMqttPayload] = useState('{\n  "items": ["maito", "tomaatti", "juusto"]\n}');
   const [mqttConfig, setMqttConfig] = useState<SimulationConfig>({
     interval: 0,
     isRunning: false,
@@ -106,21 +106,22 @@ useEffect(() => {
             const clientId = 'web_' + Math.random().toString(16).substr(2, 8);
             console.log("🆔 Käytetään clientId:tä:", clientId);
 
-            const client = mqtt.connect("ws://localhost:8083", {
-  clientId: 'web_' + Math.random().toString(16).substr(2, 8),
-  clean: true,
-  reconnectPeriod: 5000,
-  keepalive: 60,
-  connectTimeout: 5000,
-});
-
-
-
+            const client = mqtt.connect(mqttBroker, {
+                username: 'qEJbKdCj5Y5eKVebaMYW',
+                clientId: clientId,
+                protocol: 'mqtt',
+                clean: false, // Pidetään yhteys pysyvänä
+                reconnectPeriod: 5000, // Yritä uudelleen 5 sekunnin välein
+                keepalive: 60,         // Keepalive-asetus 60 sekuntia
+                connectTimeout: 5000,  // Aikakatkaisu 5 sekuntia
+                protocolVersion: 4,
+                rejectUnauthorized: false,
+            });
 
             client.on('connect', () => {
                 console.log('✅ Yhdistetty MQTT-brokeriin:', mqttBroker);
                 setMqttClient(client);
-                client.subscribe(mqttTopic, { qos: 1 }, (err) => {
+                client.subscribe(mqttTopic, (err) => {
                     if (!err) {
                         console.log(`🔔 Tilattu aihe: ${mqttTopic}`);
                     } else {
@@ -129,13 +130,13 @@ useEffect(() => {
                 });
             });
 
-            client.on('error', (err) => {
-                console.error('❌ Yhteysvirhe:', err.message);
-            });
-
             client.on('close', () => {
                 console.log('🛑 Yhteys suljettu');
-                setMqttClient(null);
+                setMqttClient(null);  // Yhteys katkeaa, aseta null
+            });
+
+            client.on('error', (err) => {
+                console.error('❌ Yhteysvirhe:', err.message);
             });
 
             client.on('offline', () => {
@@ -154,6 +155,7 @@ useEffect(() => {
         }
     }
 
+    // Katkaistaan yhteys vain, jos sovellus suljetaan
     return () => {
         if (mqttClient) {
             console.log('🔌 Katkaistaan yhteys');
@@ -162,8 +164,7 @@ useEffect(() => {
             console.log("🟢 Yhteys katkaistu ja client nollattu.");
         }
     };
-}, [mqttBroker, mqttTopic]);  // Poistettu mqttClient riippuvuuksista
-
+}, [mqttClient, mqttBroker, mqttTopic]);
 
 
 
@@ -172,27 +173,30 @@ const simulateMqttPublish = useCallback(() => {
 
     if (mqttClient && mqttClient.connected) {
         try {
-            const payloadString = mqttPayload;
+            const parsed = JSON.parse(mqttPayload);
+            console.log("📡 Lähetetään viesti aiheeseen:", mqttTopic, "Payload:", parsed);
 
-            console.log("📡 Lähetetään viesti aiheeseen:", mqttTopic, "Payload:", payloadString);
-
-            mqttClient.publish(mqttTopic, payloadString, { qos: 1 }, (err) => {
+            mqttClient.publish(mqttTopic, JSON.stringify(parsed), {}, (err) => {
                 if (err) {
                     console.error("❌ Viestin lähetys epäonnistui:", err.message);
                 } else {
-                    console.log("✅ Lähetetty MQTT:", payloadString);
+                    console.log("✅ Lähetetty MQTT:", parsed);
                 }
             });
 
             setMqttConfig(prev => ({
                 ...prev,
-                messages: addMessage(prev.messages, payloadString),
+                messages: addMessage(prev.messages, mqttPayload),
             }));
         } catch (err) {
             console.error("❌ Virhe MQTT-viestin muodossa:", err);
         }
     } else {
         console.error("🚫 MQTT-yhteyttä ei ole muodostettu tai yhteys katkennut");
+        if (mqttClient) {
+            console.log("🌐 Clientin tila (uudelleenyritys):", mqttClient.connected ? "Yhdistetty" : "Ei yhdistetty");
+            mqttClient.reconnect();  // Yritä uudelleen yhdistämistä
+        }
     }
 }, [mqttClient, mqttPayload, mqttTopic, addMessage]);
 
