@@ -156,9 +156,10 @@ const HomePage: React.FC = () => {
             <h3 className="text-xl font-semibold text-gray-900 mb-4 text-center">Data Flow Diagram</h3>
             <div className="flex justify-center">
               <img 
-                src="https://images.pexels.com/photos/7648339/pexels-photo-7648339.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2" 
-                alt="IoT Architecture Diagram" 
-                className="max-w-full h-auto rounded-lg"
+                src="https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2" 
+                alt="IoT Architecture Diagram"
+                className="max-w-full h-auto rounded-lg shadow-lg"
+                style={{ maxHeight: '400px', objectFit: 'cover' }}
               />
             </div>
           </div>
