@@ -18,7 +18,8 @@ interface SimulationConfig {
 
 const INTERVALS = {
   OFF: 0,
-
+  
+  TEN_SECONDS: 10000, 
   TEN_MINUTES: 600000,
   ONE_HOUR: 3600000,
   FIVE_HOURS: 18000000,
@@ -263,6 +264,7 @@ useEffect(() => {
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 >
                   <option value={INTERVALS.OFF}>Off</option>
+                  <option value={INTERVALS.TEN_SECONDS}>Every 10 seconds</option>
                   <option value={INTERVALS.TEN_MINUTES}>Every 10 minutes</option>
                   <option value={INTERVALS.ONE_HOUR}>Every hour</option>
                   <option value={INTERVALS.FIVE_HOURS}>Every 5 hours</option>
@@ -358,6 +360,7 @@ useEffect(() => {
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 >
                   <option value={INTERVALS.OFF}>Off</option>
+                  <option value={INTERVALS.TEN_SECONDS}>Every 10 seconds</option>
                   <option value={INTERVALS.TEN_MINUTES}>Every 10 minutes</option>
                   <option value={INTERVALS.ONE_HOUR}>Every hour</option>
                   <option value={INTERVALS.FIVE_HOURS}>Every 5 hours</option>
