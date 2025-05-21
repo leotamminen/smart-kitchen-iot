@@ -1,6 +1,5 @@
-import * as React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import mqtt from 'mqtt';
-import { useState, useEffect, useCallback } from 'react';
 import { useInterval } from 'react-use';
 import { Play, Pause, Clock, RefreshCw, Terminal, Send, Radio, AlertCircle } from 'lucide-react';
 
@@ -37,10 +36,10 @@ const SimulationPage: React.FC = () => {
 
   // MQTT Device State
   const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
-  const [mqttBroker, setMqttBroker] = useState('mqtt://localhost:1883');
+  const [mqttBroker, setMqttBroker] = useState('mqtt://127.0.0.1:1883');
   const [mqttTopic, setMqttTopic] = useState('v1/devices/me/telemetry');
   const [mqttUsername, setMqttUsername] = useState('');
-  const [mqttPayload, setMqttPayload] = useState('{\n  "items": ["maito", "tomaatti", "juusto"]\n}');
+  const [mqttPayload, setMqttPayload] = useState('{\n  "temperature": 22.3,\n  "humidity": 45\n}');
   const [mqttConfig, setMqttConfig] = useState<SimulationConfig>({
     interval: 0,
     isRunning: false,
@@ -101,8 +100,9 @@ const SimulationPage: React.FC = () => {
     if (mqttConfig.isRunning && !mqttClient && mqttUsername) {
       const client = mqtt.connect(mqttBroker, {
         username: mqttUsername,
-        clientId: 'web_' + Math.random().toString(16).substr(2, 8),
         protocolVersion: 4,
+        protocolId: 'MQTT',
+        clientId: 'web_' + Math.random().toString(16).substr(2, 8),
         clean: true,
         reconnectPeriod: 5000,
         connectTimeout: 3000,
@@ -140,13 +140,17 @@ const SimulationPage: React.FC = () => {
     if (mqttClient && mqttClient.connected) {
       try {
         const parsed = JSON.parse(mqttPayload);
-        mqttClient.publish(mqttTopic, JSON.stringify(parsed));
-        console.log("📡 MQTT Published:", parsed);
-
-        setMqttConfig(prev => ({
-          ...prev,
-          messages: addMessage(prev.messages, mqttPayload),
-        }));
+        mqttClient.publish(mqttTopic, JSON.stringify(parsed), {}, (err) => {
+          if (err) {
+            console.error('❌ Failed to publish:', err);
+          } else {
+            console.log('📡 Data sent:', parsed);
+            setMqttConfig(prev => ({
+              ...prev,
+              messages: addMessage(prev.messages, mqttPayload),
+            }));
+          }
+        });
       } catch (err) {
         console.error("❌ Invalid MQTT JSON payload:", err);
       }
@@ -323,7 +327,7 @@ const SimulationPage: React.FC = () => {
                   type="text"
                   value={mqttBroker}
                   onChange={(e) => setMqttBroker(e.target.value)}
-                  placeholder="mqtt://localhost:1883"
+                  placeholder="mqtt://127.0.0.1:1883"
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
