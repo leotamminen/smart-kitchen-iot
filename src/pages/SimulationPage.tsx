@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useInterval } from 'react-use';
 import { Play, Pause, Clock, RefreshCw, Terminal, Send, Radio, AlertCircle } from 'lucide-react';
 
-
 interface Message {
   timestamp: string;
   payload: string;
@@ -18,8 +17,7 @@ interface SimulationConfig {
 
 const INTERVALS = {
   OFF: 0,
-  
-  TEN_SECONDS: 10000, 
+  TEN_SECONDS: 10000,
   TEN_MINUTES: 600000,
   ONE_HOUR: 3600000,
   FIVE_HOURS: 18000000,
@@ -39,8 +37,9 @@ const SimulationPage: React.FC = () => {
 
   // MQTT Device State
   const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
-  const [mqttBroker, setMqttBroker] = useState('ws://localhost:8083/mqtt');
-  const [mqttTopic, setMqttTopic] = useState('smart/fridge');
+  const [mqttBroker, setMqttBroker] = useState('mqtt://localhost:1883');
+  const [mqttTopic, setMqttTopic] = useState('v1/devices/me/telemetry');
+  const [mqttUsername, setMqttUsername] = useState('');
   const [mqttPayload, setMqttPayload] = useState('{\n  "items": ["maito", "tomaatti", "juusto"]\n}');
   const [mqttConfig, setMqttConfig] = useState<SimulationConfig>({
     interval: 0,
@@ -57,132 +56,130 @@ const SimulationPage: React.FC = () => {
   }, []);
 
   const simulateHttpRequest = useCallback(() => {
-  let parsedPayload;
-  try {
-    parsedPayload = JSON.parse(httpPayload);
-  } catch (err) {
-    console.error("❌ Invalid JSON in payload:", err);
-    alert("Payload is not valid JSON");
-    return;
-  }
-
-  console.log("📤 Sending HTTP request", {
-    method: httpMethod,
-    endpoint: httpEndpoint,
-    payload: parsedPayload,
-  });
-
-  fetch(httpEndpoint, {
-    method: httpMethod,
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body:
-      httpMethod === "GET" || httpMethod === "DELETE"
-        ? undefined
-        : JSON.stringify(parsedPayload),
-  })
-    .then((res) => {
-      if (!res.ok) {
-        console.error(`❌ HTTP ${httpMethod} request failed`, res.status, res.statusText);
-      } else {
-        console.log("✅ HTTP request successful");
-        setHttpConfig((prev) => ({
-          ...prev,
-          messages: addMessage(prev.messages, httpPayload),
-        }));
-      }
-    })
-    .catch((err) => {
-      console.error("❌ HTTP request error:", err);
-    });
-}, [httpPayload, httpEndpoint, httpMethod, addMessage]);
-
-useEffect(() => {
-  if (mqttConfig.isRunning && !mqttClient) {
-    const client = mqtt.connect(mqttBroker, {
-      username: 'ra4l11pN8UEXmRRbJ7WB',
-      clientId: 'web_' + Math.random().toString(16).substr(2, 8),
-      protocolVersion: 4,
-      clean: true,
-      reconnectPeriod: 5000,
-      connectTimeout: 3000,
-    });
-
-    client.on('connect', () => {
-      console.log('✅ Connected to MQTT broker');
-      client.publish('v1/devices/me/telemetry', JSON.stringify({ items: ["test_connection"] }));
-    });
-
-    client.on('error', (err) => {
-      console.error('❌ Connection error:', err.message);
-    });
-
-    setMqttClient(client);
-  }
-
-  
-  // Disconnect if stopped
-  if (!mqttConfig.isRunning && mqttClient) {
-    console.log('🛑 Stopping MQTT client...');
-    mqttClient.end(true, {}, () => {
-      console.log('✅ MQTT client disconnected');
-      setMqttClient(null);
-    });
-  }
-
-  // Optional cleanup (e.g., on unmount)
-  return () => {
-    if (mqttClient) {
-      mqttClient.end(true);
-      setMqttClient(null);
-    }
-  };
-}, [mqttConfig.isRunning, mqttClient, mqttBroker]);
-
- const simulateMqttPublish = useCallback(() => {
-  if (mqttClient && mqttClient.connected) {
+    let parsedPayload;
     try {
-      const parsed = JSON.parse(mqttPayload);
-      // Use the correct ThingsBoard telemetry topic
-      mqttClient.publish('v1/devices/me/telemetry', JSON.stringify(parsed));
-      console.log("📡 MQTT Published:", parsed);
-
-      setMqttConfig(prev => ({
-        ...prev,
-        messages: addMessage(prev.messages, mqttPayload),
-      }));
+      parsedPayload = JSON.parse(httpPayload);
     } catch (err) {
-      console.error("❌ Invalid MQTT JSON payload:", err);
+      console.error("❌ Invalid JSON in payload:", err);
+      alert("Payload is not valid JSON");
+      return;
     }
-  }
-}, [mqttClient, mqttPayload, addMessage]);
+
+    console.log("📤 Sending HTTP request", {
+      method: httpMethod,
+      endpoint: httpEndpoint,
+      payload: parsedPayload,
+    });
+
+    fetch(httpEndpoint, {
+      method: httpMethod,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body:
+        httpMethod === "GET" || httpMethod === "DELETE"
+          ? undefined
+          : JSON.stringify(parsedPayload),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          console.error(`❌ HTTP ${httpMethod} request failed`, res.status, res.statusText);
+        } else {
+          console.log("✅ HTTP request successful");
+          setHttpConfig((prev) => ({
+            ...prev,
+            messages: addMessage(prev.messages, httpPayload),
+          }));
+        }
+      })
+      .catch((err) => {
+        console.error("❌ HTTP request error:", err);
+      });
+  }, [httpPayload, httpEndpoint, httpMethod, addMessage]);
+
+  useEffect(() => {
+    if (mqttConfig.isRunning && !mqttClient && mqttUsername) {
+      const client = mqtt.connect(mqttBroker, {
+        username: mqttUsername,
+        clientId: 'web_' + Math.random().toString(16).substr(2, 8),
+        protocolVersion: 4,
+        clean: true,
+        reconnectPeriod: 5000,
+        connectTimeout: 3000,
+      });
+
+      client.on('connect', () => {
+        console.log('✅ Connected to MQTT broker');
+        client.publish(mqttTopic, JSON.stringify({ connected: true }));
+      });
+
+      client.on('error', (err) => {
+        console.error('❌ Connection error:', err.message);
+      });
+
+      setMqttClient(client);
+    }
+
+    if (!mqttConfig.isRunning && mqttClient) {
+      console.log('🛑 Stopping MQTT client...');
+      mqttClient.end(true, {}, () => {
+        console.log('✅ MQTT client disconnected');
+        setMqttClient(null);
+      });
+    }
+
+    return () => {
+      if (mqttClient) {
+        mqttClient.end(true);
+        setMqttClient(null);
+      }
+    };
+  }, [mqttConfig.isRunning, mqttClient, mqttBroker, mqttUsername, mqttTopic]);
+
+  const simulateMqttPublish = useCallback(() => {
+    if (mqttClient && mqttClient.connected) {
+      try {
+        const parsed = JSON.parse(mqttPayload);
+        mqttClient.publish(mqttTopic, JSON.stringify(parsed));
+        console.log("📡 MQTT Published:", parsed);
+
+        setMqttConfig(prev => ({
+          ...prev,
+          messages: addMessage(prev.messages, mqttPayload),
+        }));
+      } catch (err) {
+        console.error("❌ Invalid MQTT JSON payload:", err);
+      }
+    }
+  }, [mqttClient, mqttPayload, mqttTopic, addMessage]);
 
   useInterval(simulateHttpRequest, httpConfig.interval || null);
   useInterval(simulateMqttPublish, mqttConfig.interval || null);
 
   const toggleSimulation = (type: 'http' | 'mqtt') => {
-  console.log(`[DEBUG] Toggle pressed for ${type}`);
-  if (type === 'http') {
-    setHttpConfig(prev => {
-      const updated = { ...prev, isRunning: !prev.isRunning };
-      if (!prev.isRunning) {
-        // Odota tilan päivitystä ennen suoraa kutsua
-        setTimeout(() => simulateHttpRequest(), 0);
-      }
-      return updated;
-    });
-  } else {
-    setMqttConfig(prev => {
-      const updated = { ...prev, isRunning: !prev.isRunning };
-      if (!prev.isRunning) {
-        setTimeout(() => simulateMqttPublish(), 0);
-      }
-      return updated;
-    });
-  }
-};
+    if (type === 'mqtt' && !mqttUsername) {
+      alert('Please enter MQTT username (access token) before starting');
+      return;
+    }
 
+    if (type === 'http') {
+      setHttpConfig(prev => {
+        const updated = { ...prev, isRunning: !prev.isRunning };
+        if (!prev.isRunning) {
+          setTimeout(() => simulateHttpRequest(), 0);
+        }
+        return updated;
+      });
+    } else {
+      setMqttConfig(prev => {
+        const updated = { ...prev, isRunning: !prev.isRunning };
+        if (!prev.isRunning) {
+          setTimeout(() => simulateMqttPublish(), 0);
+        }
+        return updated;
+      });
+    }
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen py-16">
@@ -326,7 +323,18 @@ useEffect(() => {
                   type="text"
                   value={mqttBroker}
                   onChange={(e) => setMqttBroker(e.target.value)}
-                  placeholder="mqtt://broker.hivemq.com"
+                  placeholder="mqtt://localhost:1883"
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Username (Access Token)</label>
+                <input
+                  type="text"
+                  value={mqttUsername}
+                  onChange={(e) => setMqttUsername(e.target.value)}
+                  placeholder="Enter your device access token"
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
@@ -337,7 +345,7 @@ useEffect(() => {
                   type="text"
                   value={mqttTopic}
                   onChange={(e) => setMqttTopic(e.target.value)}
-                  placeholder="smart/fridge"
+                  placeholder="v1/devices/me/telemetry"
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
